@@ -41,7 +41,7 @@ exports.createOrder = async (req, res) => {
 
         // Calculate tax and shipping
         const tax = subtotal * 0.12;
-        const shippingCost = subtotal > 500000 ? 0 : 5000;
+        const shippingCost = 1000;
         const totalPrice = subtotal + tax + shippingCost;
 
         const order = {

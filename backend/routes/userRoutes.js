@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   updateProfile,
+  updatePassword,
   addAddress,
   updateAddress,
   deleteAddress,
@@ -11,6 +12,7 @@ const {
 const { protect, authorize } = require('../middleware/auth');
 
 router.put('/profile', protect, updateProfile);
+router.put('/password', protect, updatePassword);
 router.post('/address', protect, addAddress);
 router.put('/address/:addressId', protect, updateAddress);
 router.delete('/address/:addressId', protect, deleteAddress);

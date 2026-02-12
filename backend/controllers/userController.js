@@ -1,4 +1,5 @@
 const { users, reviews, watches, toObjectId, ObjectId } = require('../models/collections');
+const bcrypt = require('bcryptjs');
 
 exports.updateProfile = async (req, res) => {
     try {
@@ -217,5 +218,49 @@ const updateWatchRating = async (watchObjectId) => {
                 }
             }
         );
+    }
+};
+
+exports.updatePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Please provide current and new password' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+
+        const user = await users().findOne({ _id: toObjectId(req.user.id) });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Verify current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        await users().updateOne(
+            { _id: toObjectId(req.user.id) },
+            {
+                $set: {
+                    password: hashedPassword,
+                    updatedAt: new Date()
+                }
+            }
+        );
+
+        res.status(200).json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };

@@ -745,6 +745,25 @@ const renderProfilePage = async () => {
                         </div>
                         <button type="submit" class="btn btn-primary">Update Profile</button>
                     </form>
+
+                    <hr style="margin: 2rem 0; border: none; border-top: 1px solid #ddd;">
+
+                    <h3>Change Password</h3>
+                    <form onsubmit="updatePassword(event)">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" id="current-password" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="new-password" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="confirm-password" required minlength="6">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Change Password</button>
+                    </form>
                 </div>
 
                 <div class="profile-section">
@@ -786,6 +805,41 @@ const updateProfile = async (e) => {
         });
 
         showAlert('Profile updated successfully');
+    } catch (error) {
+        showAlert(error.message, 'error');
+    }
+};
+
+const updatePassword = async (e) => {
+    e.preventDefault();
+
+    try {
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+
+        // Client-side validation
+        if (newPassword !== confirmPassword) {
+            showAlert('New passwords do not match', 'error');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            showAlert('New password must be at least 6 characters', 'error');
+            return;
+        }
+
+        await apiRequest('/users/password', {
+            method: 'PUT',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        showAlert('Password updated successfully');
+
+        // Clear the form
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
     } catch (error) {
         showAlert(error.message, 'error');
     }

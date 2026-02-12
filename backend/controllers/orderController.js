@@ -2,41 +2,58 @@ const { orders, watches, users, toObjectId, ObjectId } = require('../models/coll
 
 exports.createOrder = async (req, res) => {
     try {
-        const { items, shippingAddress, paymentMethod } = req.body;
+        // Accept both 'items' and 'orderItems' for compatibility
+        const { items, orderItems, shippingAddress, paymentMethod } = req.body;
+        const cartItems = orderItems || items;
 
-        if (!items || items.length === 0) {
+        if (!cartItems || cartItems.length === 0) {
             return res.status(400).json({ success: false, message: 'No order items provided' });
         }
 
-        // Calculate total price
-        let totalPrice = 0;
-        const orderItems = [];
+        // Calculate total price and subtotal
+        let subtotal = 0;
+        const processedOrderItems = [];
 
-        for (const item of items) {
-            const watch = await watches().findOne({ _id: toObjectId(item.watchId) });
+        for (const item of cartItems) {
+            // Handle both formats: { watchId, quantity } and { watch, quantity, brand, model, price }
+            const watchId = item.watchId || item.watch;
+
+            if (!watchId) {
+                return res.status(400).json({ success: false, message: 'Invalid item format' });
+            }
+
+            const watch = await watches().findOne({ _id: toObjectId(watchId) });
             if (!watch) {
-                return res.status(404).json({ success: false, message: `Watch not found: ${item.watchId}` });
+                return res.status(404).json({ success: false, message: `Watch not found: ${watchId}` });
             }
 
             const itemTotal = watch.price * item.quantity;
-            totalPrice += itemTotal;
+            subtotal += itemTotal;
 
-            orderItems.push({
-                watch: toObjectId(item.watchId),
-                name: watch.name,
+            processedOrderItems.push({
+                watch: toObjectId(watchId),
+                brand: watch.brand,
+                model: watch.model,
                 price: watch.price,
-                quantity: item.quantity,
-                image: watch.images && watch.images.length > 0 ? watch.images[0] : null
+                quantity: item.quantity
             });
         }
 
+        // Calculate tax and shipping
+        const tax = subtotal * 0.12;
+        const shippingCost = subtotal > 500000 ? 0 : 5000;
+        const totalPrice = subtotal + tax + shippingCost;
+
         const order = {
             user: toObjectId(req.user.id),
-            items: orderItems,
+            orderItems: processedOrderItems,
+            subtotal,
+            tax,
+            shippingCost,
             totalPrice,
             shippingAddress,
             paymentMethod: paymentMethod || 'Cash on Delivery',
-            orderStatus: 'pending',
+            status: 'Pending',
             isPaid: false,
             createdAt: new Date(),
             updatedAt: new Date()
@@ -121,7 +138,7 @@ exports.updateOrderStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
 
-        const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+        const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ success: false, message: 'Invalid order status' });
         }
@@ -130,7 +147,7 @@ exports.updateOrderStatus = async (req, res) => {
             { _id: toObjectId(id) },
             {
                 $set: {
-                    orderStatus: status,
+                    status: status,
                     updatedAt: new Date()
                 }
             },
@@ -212,7 +229,7 @@ exports.getOrderStatistics = async (req, res) => {
         const statusBreakdown = await orders().aggregate([
             {
                 $group: {
-                    _id: '$orderStatus',
+                    _id: '$status',
                     count: { $sum: 1 }
                 }
             }
@@ -247,19 +264,25 @@ exports.removeOrderItem = async (req, res) => {
         }
 
         // Remove the item and recalculate total
-        const updatedItems = order.items.filter(item => item._id.toString() !== itemId);
+        const updatedItems = order.orderItems.filter(item => item._id.toString() !== itemId);
 
         if (updatedItems.length === 0) {
             return res.status(400).json({ success: false, message: 'Cannot remove all items from order' });
         }
 
-        const newTotalPrice = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const subtotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const tax = subtotal * 0.12;
+        const shippingCost = subtotal > 500000 ? 0 : 5000;
+        const newTotalPrice = subtotal + tax + shippingCost;
 
         const updatedOrder = await orders().findOneAndUpdate(
             { _id: toObjectId(id) },
             {
                 $set: {
-                    items: updatedItems,
+                    orderItems: updatedItems,
+                    subtotal,
+                    tax,
+                    shippingCost,
                     totalPrice: newTotalPrice,
                     updatedAt: new Date()
                 }

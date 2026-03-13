@@ -25,11 +25,11 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
 
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use('/frontend', express.static(path.join(__dirname, '../frontend')));
 
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+    res.sendFile(path.join(__dirname, '../index.html'));
   }
 });
 

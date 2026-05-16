@@ -76,14 +76,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Pull latest images and restart
-        env:
-          MONGODB_URI: ${{ secrets.MONGODB_URI }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      - name: Create runner environment file
+        run: |
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "PORT=3000" >> .env
+          echo "NODE_ENV=production" >> .env
+
+      - name: Pull latest images and start
         run: |
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/watchstore-backend:latest
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/watchstore-frontend:latest
-          MONGODB_URI="${{ secrets.MONGODB_URI }}" JWT_SECRET="${{ secrets.JWT_SECRET }}" docker compose up -d backend frontend
+          docker compose up -d
 
       - name: Health check
         run: |

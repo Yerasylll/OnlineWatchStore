@@ -1,5 +1,9 @@
-node_modules
+node_modules/
 .env
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
 .DS_Store
-.vscode
-package-lock.json
+locust/results/
+terraform/terraform.tfvars

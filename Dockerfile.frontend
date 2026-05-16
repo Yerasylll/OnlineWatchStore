@@ -1,0 +1,16 @@
+# Serve Vanilla JS frontend with nginx
+FROM nginx:1.25-alpine
+
+# Remove default nginx content
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy frontend files
+COPY frontend/ /usr/share/nginx/html/frontend/
+COPY index.html /usr/share/nginx/html/
+
+# Custom nginx config to proxy /api to backend
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

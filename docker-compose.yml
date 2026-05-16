@@ -1,0 +1,112 @@
+version: "3.9"
+
+networks:
+  watch-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  grafana-data:
+  prometheus-data:
+
+services:
+
+  # -- Application --
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: watchstore-backend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      MONGODB_URI: ${MONGODB_URI}
+      JWT_SECRET: ${JWT_SECRET}
+      DB_NAME: ${DB_NAME}
+      NODE_ENV: production
+    networks:
+      - watch-net
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: watchstore-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - watch-net
+    ports:
+      - "80:80"
+
+  # -- Observability Stack --
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: watchstore-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    networks:
+      - watch-net
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:10.3.0
+    container_name: watchstore-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - watch-net
+    ports:
+      - "3001:3000"
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: watchstore-alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    networks:
+      - watch-net
+    ports:
+      - "9093:9093"
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: watchstore-node-exporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    networks:
+      - watch-net
+    ports:
+      - "9100:9100"

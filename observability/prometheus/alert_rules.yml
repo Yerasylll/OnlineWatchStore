@@ -1,0 +1,82 @@
+groups:
+  - name: watchstore_infra
+    rules:
+
+      - alert: HighCPUUsageWarning
+        expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[2m]))) * 100 > 70
+        for: 1m
+        labels:
+          severity: warning
+          service: online-watch-store
+        annotations:
+          summary: "High CPU Usage – Warning"
+          description: "CPU above 70% for 1 minute. Current: {{ $value | printf \"%.1f\" }}%"
+
+      - alert: HighCPUUsageCritical
+        expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[2m]))) * 100 > 90
+        for: 1m
+        labels:
+          severity: critical
+          service: online-watch-store
+        annotations:
+          summary: "High CPU Usage – CRITICAL"
+          description: "CPU above 90% for 1 minute. Current: {{ $value | printf \"%.1f\" }}%"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 75
+        for: 2m
+        labels:
+          severity: warning
+          service: online-watch-store
+        annotations:
+          summary: "High Memory Usage"
+          description: "Memory above 75% for 2 minutes. Current: {{ $value | printf \"%.1f\" }}%"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 1m
+        labels:
+          severity: critical
+          service: online-watch-store
+        annotations:
+          summary: "Disk Space Critically Low"
+          description: "Less than 10% disk available. Current: {{ $value | printf \"%.1f\" }}%"
+
+  - name: watchstore_slo
+    rules:
+
+      - alert: AppDown
+        expr: up{job="watchstore-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: online-watch-store
+        annotations:
+          summary: "WatchStore backend is DOWN"
+          description: "The backend has been unreachable for 1 minute."
+
+      - alert: HighErrorRate
+        expr: >
+          sum(rate(http_requests_total{job="watchstore-backend", status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="watchstore-backend"}[5m])) > 0.005
+        for: 2m
+        labels:
+          severity: critical
+          service: online-watch-store
+        annotations:
+          summary: "High HTTP error rate – SLO breach"
+          description: "Error rate exceeds 0.5% SLO for 2 minutes."
+
+      - alert: HighP95Latency
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_ms_bucket{job="watchstore-backend"}[5m])) by (le)
+          ) > 500
+        for: 5m
+        labels:
+          severity: warning
+          service: online-watch-store
+        annotations:
+          summary: "p95 latency exceeds 500ms SLO"
+          description: "95th percentile response time is above 500ms."

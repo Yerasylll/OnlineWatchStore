@@ -1,0 +1,31 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'team-email'
+
+  routes:
+    - match:
+        severity: critical
+      receiver: 'team-email'
+      group_wait: 10s
+
+receivers:
+  - name: 'team-email'
+    email_configs:
+      - to: 'your-team@example.com'
+        from: 'alerts@watchstore.local'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'your-email@gmail.com'
+        auth_password: 'your-app-password'
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      alertname: 'AppDown'
+    target_match:
+      alertname: 'HighErrorRate'

@@ -1,0 +1,111 @@
+{
+  "title": "WatchStore SRE Dashboard",
+  "uid": "watchstore-sre",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "tags": ["watchstore", "sre"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Availability SLO (target ≥ 99.5%)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": { "steps": [
+            { "value": null, "color": "red" },
+            { "value": 0.99, "color": "yellow" },
+            { "value": 0.995, "color": "green" }
+          ]}
+        }
+      },
+      "options": { "colorMode": "background" },
+      "targets": [{ "expr": "1 - (sum(rate(http_requests_total{job=\"watchstore-backend\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"watchstore-backend\"}[5m])))", "legendFormat": "Availability" }]
+    },
+    {
+      "id": 2,
+      "title": "p95 Latency SLO (target < 500ms)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": { "steps": [
+            { "value": null, "color": "green" },
+            { "value": 300, "color": "yellow" },
+            { "value": 500, "color": "red" }
+          ]}
+        }
+      },
+      "options": { "colorMode": "background" },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"watchstore-backend\"}[5m])) by (le))", "legendFormat": "p95 ms" }]
+    },
+    {
+      "id": 3,
+      "title": "Requests / sec",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [{ "expr": "sum(rate(http_requests_total{job=\"watchstore-backend\"}[1m]))", "legendFormat": "RPS" }]
+    },
+    {
+      "id": 4,
+      "title": "Error Rate",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": { "steps": [
+            { "value": null, "color": "green" },
+            { "value": 0.001, "color": "yellow" },
+            { "value": 0.005, "color": "red" }
+          ]}
+        }
+      },
+      "options": { "colorMode": "background" },
+      "targets": [{ "expr": "sum(rate(http_requests_total{job=\"watchstore-backend\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"watchstore-backend\"}[5m]))", "legendFormat": "Error %" }]
+    },
+    {
+      "id": 5,
+      "title": "HTTP Requests by Status Code",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{job=\"watchstore-backend\",status=~\"2..\"}[1m]))", "legendFormat": "2xx Success" },
+        { "expr": "sum(rate(http_requests_total{job=\"watchstore-backend\",status=~\"4..\"}[1m]))", "legendFormat": "4xx Client Error" },
+        { "expr": "sum(rate(http_requests_total{job=\"watchstore-backend\",status=~\"5..\"}[1m]))", "legendFormat": "5xx Server Error" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Response Time Percentiles",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_ms_bucket{job=\"watchstore-backend\"}[5m])) by (le))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"watchstore-backend\"}[5m])) by (le))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_ms_bucket{job=\"watchstore-backend\"}[5m])) by (le))", "legendFormat": "p99" }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "CPU Usage %",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100 } },
+      "targets": [{ "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m]))) * 100", "legendFormat": "CPU %" }]
+    },
+    {
+      "id": 8,
+      "title": "Memory Usage %",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100 } },
+      "targets": [{ "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "legendFormat": "Memory %" }]
+    }
+  ]
+}

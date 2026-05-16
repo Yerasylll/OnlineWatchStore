@@ -77,10 +77,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Pull latest images and restart
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/watchstore-backend:latest
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/watchstore-frontend:latest
-          docker compose up -d backend frontend
+          MONGODB_URI="${{ secrets.MONGODB_URI }}" JWT_SECRET="${{ secrets.JWT_SECRET }}" docker compose up -d backend frontend
 
       - name: Health check
         run: |

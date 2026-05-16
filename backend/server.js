@@ -10,13 +10,18 @@ const watchRoutes = require('./routes/watchRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const userRoutes = require('./routes/userRoutes');
-
+const { metricsMiddleware, metricsEndpoint, healthEndpoint } = require('../metrics');
 const app = express();
 
 connectDB();
 
 app.use(cors());
 app.use(express.json());
+
+app.use(metricsMiddleware);
+app.get('/metrics', metricsEndpoint);
+app.get('/api/health', healthEndpoint);
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth', authRoutes);

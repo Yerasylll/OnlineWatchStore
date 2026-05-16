@@ -1,4 +1,4 @@
-const { getDB } = require('./backend/config/database');
+const { getDB } = require('./config/database');
 
 let counts = {};
 let durationBuckets = {};

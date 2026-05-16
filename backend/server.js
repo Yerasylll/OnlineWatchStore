@@ -10,7 +10,7 @@ const watchRoutes = require('./routes/watchRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const userRoutes = require('./routes/userRoutes');
-const { metricsMiddleware, metricsEndpoint, healthEndpoint } = require('../metrics');
+const { metricsMiddleware, metricsEndpoint, healthEndpoint } = require('./metrics');
 const app = express();
 
 connectDB();

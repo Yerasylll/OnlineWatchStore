@@ -1,4 +1,5 @@
 import random
+from locust import HttpUser, task, between
 
 BRANDS = ["Rolex", "Omega", "Seiko", "Casio", "TAG Heuer"]
 SEARCH_TERMS = ["rolex", "gold", "automatic", "luxury", "sport"]
@@ -7,8 +8,12 @@ SEARCH_TERMS = ["rolex", "gold", "automatic", "luxury", "sport"]
 class BrowsingUser(HttpUser):
     """Regular visitor browsing the store — 70% of traffic."""
     weight = 70
-    wait_time = between(1, 3)
+    wait_time = between(1, 5)
 
+    @task
+    def view_watches(self):
+        self.client.get("/api/watches")
+        
     @task(5)
     def list_watches(self):
         self.client.get("/api/watches")

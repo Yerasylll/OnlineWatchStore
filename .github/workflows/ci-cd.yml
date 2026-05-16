@@ -80,7 +80,7 @@ jobs:
         run: |
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/watchstore-backend:latest
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/watchstore-frontend:latest
-          docker-compose up -d backend frontend
+          docker compose up -d backend frontend
 
       - name: Health check
         run: |

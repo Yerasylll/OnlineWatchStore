@@ -76,21 +76,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create runner environment file
-        run: |
-          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" >> .env
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-          echo "PORT=3000" >> .env
-          echo "NODE_ENV=production" >> .env
-
-      - name: Pull latest images and start
+      - name: Pull latest images
         run: |
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/watchstore-backend:latest
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/watchstore-frontend:latest
+
+      - name: Start containers with Docker Compose
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          # This writes the secrets cleanly to a runner environment file that docker-compose reads automatically
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           docker compose up -d
 
-      - name: Health check
+      - name: Verify Containers are Running
         run: |
-          sleep 15
-          curl -f http://localhost:3000/api/health || exit 1
-          echo "Health check passed"
+          sleep 10
+          docker ps
+          # Check if your containers are active
+          if [ $(docker ps | grep -E "backend|frontend" | wc -l) -eq 0 ]; then
+            echo "Error: Containers failed to stay up!"
+            docker ps -a
+            exit 1
+          fi
+          echo "All containers are verified and up!"

@@ -1,0 +1,26 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy only production dependencies
+COPY --from=builder /app/node_modules ./node_modules
+COPY package.json ./
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+COPY index.html ./
+
+# Expose application port
+EXPOSE 3000
+
+# Non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+CMD ["node", "backend/server.js"]
